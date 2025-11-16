@@ -3,27 +3,14 @@
     "step": {
       "user": {
         "title": "Set up Tidal",
-        "description": "Enter your Tidal API credentials. You will be redirected to Tidal to authorize access.",
+        "description": "You will be redirected to Tidal to authorize access. Please configure your Tidal application credentials first if you haven't done so.",
         "data": {
-          "client_id": "Client ID",
-          "client_secret": "Client Secret"
-        }
-      },
-      "user_id": {
-        "title": "Tidal User ID",
-        "description": "Enter your Tidal User ID",
-        "data": {
-          "user_id": "User ID",
           "country_code": "Country Code"
         }
       },
       "reauth_confirm": {
         "title": "Reauthenticate Tidal",
-        "description": "Your Tidal credentials need to be updated",
-        "data": {
-          "client_id": "Client ID",
-          "client_secret": "Client Secret"
-        }
+        "description": "Your Tidal credentials need to be updated for account: {account}"
       }
     },
     "error": {
@@ -35,10 +22,8 @@
     "abort": {
       "already_configured": "This Tidal account is already configured.",
       "reauth_successful": "Reauthentication successful.",
-      "reauth_failed": "Reauthentication failed. Please try again.",
-      "missing_credentials": "Missing credentials from OAuth callback.",
-      "invalid_state": "Invalid state parameter. Possible CSRF attack.",
-      "missing_code": "Missing authorization code."
+      "missing_configuration": "Application credentials must be configured first.",
+      "oauth_error": "OAuth authentication failed."
     }
   },
   "options": {
@@ -51,5 +36,8 @@
         }
       }
     }
+  },
+  "application_credentials": {
+    "description": "Follow the [Tidal Developer documentation]({oauth_url}) to create an OAuth2 application. Set the redirect URI to:\n\n`{redirect_uri}`\n\nFor more information, see the [Tidal API documentation]({more_info_url})."
   }
 }
