@@ -13,7 +13,7 @@ CONF_COUNTRY_CODE: Final = "country_code"
 
 # Default values
 DEFAULT_NAME: Final = "Tidal"
-DEFAULT_COUNTRY_CODE: Final = "US"
+DEFAULT_COUNTRY_CODE: Final = "DE"
 
 # API constants
 API_BASE_URL: Final = "https://openapi.tidal.com/v2"
