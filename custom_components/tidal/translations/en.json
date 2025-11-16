@@ -1,0 +1,46 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Tidal",
+        "description": "Enter your Tidal API credentials",
+        "data": {
+          "client_id": "Client ID",
+          "client_secret": "Client Secret",
+          "user_id": "User ID",
+          "country_code": "Country Code"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Tidal",
+        "description": "Your Tidal credentials need to be updated",
+        "data": {
+          "client_id": "Client ID",
+          "client_secret": "Client Secret"
+        }
+      }
+    },
+    "error": {
+      "authentication_failed": "Authentication failed. Please check your credentials.",
+      "cannot_connect": "Unable to connect to Tidal API. Please try again later.",
+      "invalid_auth": "Invalid authentication credentials.",
+      "unknown_error": "An unknown error occurred."
+    },
+    "abort": {
+      "already_configured": "This Tidal account is already configured.",
+      "reauth_successful": "Reauthentication successful.",
+      "reauth_failed": "Reauthentication failed. Please try again."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tidal Options",
+        "description": "Configure Tidal integration options",
+        "data": {
+          "country_code": "Country Code"
+        }
+      }
+    }
+  }
+}
