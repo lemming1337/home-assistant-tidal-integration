@@ -26,7 +26,6 @@ OAUTH_SCOPES: Final = [
     "playlists.read",
     "playlists.write",
     "collection.read",
-    "collection.write",
     "playback",
     "search.read",
 ]
