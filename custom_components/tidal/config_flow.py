@@ -45,6 +45,7 @@ class TidalFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
         self._client_id: str | None = None
         self._client_secret: str | None = None
+        self._country_code: str | None = None
         self._code_verifier: str | None = None
         self._state: str | None = None
         self._redirect_uri: str | None = None
@@ -52,12 +53,13 @@ class TidalFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle the initial step - collect Client ID and Secret."""
+        """Handle the initial step - collect Client ID, Secret, and Country Code."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
             self._client_id = user_input[CONF_CLIENT_ID]
             self._client_secret = user_input[CONF_CLIENT_SECRET]
+            self._country_code = user_input.get(CONF_COUNTRY_CODE, DEFAULT_COUNTRY_CODE)
 
             # Generate PKCE code verifier and challenge
             self._code_verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8').rstrip("=")
@@ -91,6 +93,7 @@ class TidalFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_CLIENT_ID): str,
                     vol.Required(CONF_CLIENT_SECRET): str,
+                    vol.Optional(CONF_COUNTRY_CODE, default=DEFAULT_COUNTRY_CODE): str,
                 }
             ),
             errors=errors,
@@ -130,25 +133,24 @@ class TidalFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
             access_token = token_response["access_token"]
             refresh_token = token_response.get("refresh_token")
-            user_id = token_response.get("user", {}).get("userId")
+
+            # Get user ID from /users/me endpoint
+            api = TidalAPI(
+                session=session,
+                client_id=self._client_id,
+                client_secret=self._client_secret,
+                user_id="",  # Temporary, will be updated after getting user info
+                country_code=self._country_code or DEFAULT_COUNTRY_CODE,
+            )
+            await api.authenticate(access_token, refresh_token)
+
+            # Call /users/me to get the user ID
+            user_data = await api.get_current_user()
+            user_id = user_data.get("id")
 
             if not user_id:
-                # Try to get user ID from API
-                api = TidalAPI(
-                    session=session,
-                    client_id=self._client_id,
-                    client_secret=self._client_secret,
-                    user_id="",  # Will be updated
-                    country_code=DEFAULT_COUNTRY_CODE,
-                )
-                await api.authenticate(access_token, refresh_token)
-
-                # Get user info to retrieve user_id
-                # For now, we'll need the user to provide it
-                return await self.async_step_user_id({
-                    "access_token": access_token,
-                    "refresh_token": refresh_token,
-                })
+                _LOGGER.error("Failed to retrieve user ID from /users/me endpoint")
+                return self.async_abort(reason=ERROR_AUTH_FAILED)
 
             # Set unique ID
             await self.async_set_unique_id(str(user_id))
@@ -162,51 +164,13 @@ class TidalFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_USER_ID: str(user_id),
                     CONF_ACCESS_TOKEN: access_token,
                     "refresh_token": refresh_token,
-                    CONF_COUNTRY_CODE: DEFAULT_COUNTRY_CODE,
+                    CONF_COUNTRY_CODE: self._country_code or DEFAULT_COUNTRY_CODE,
                 },
             )
 
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.exception("Error during token exchange: %s", err)
             return self.async_abort(reason=ERROR_AUTH_FAILED)
-
-    async def async_step_user_id(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle user ID input if not provided by API."""
-        errors: dict[str, str] = {}
-
-        if user_input is not None and CONF_USER_ID in user_input:
-            user_id = user_input[CONF_USER_ID]
-            access_token = user_input.get("access_token")
-            refresh_token = user_input.get("refresh_token")
-
-            # Set unique ID
-            await self.async_set_unique_id(str(user_id))
-            self._abort_if_unique_id_configured()
-
-            return self.async_create_entry(
-                title=f"Tidal - {user_id}",
-                data={
-                    CONF_CLIENT_ID: self._client_id,
-                    CONF_CLIENT_SECRET: self._client_secret,
-                    CONF_USER_ID: str(user_id),
-                    CONF_ACCESS_TOKEN: access_token,
-                    "refresh_token": refresh_token,
-                    CONF_COUNTRY_CODE: DEFAULT_COUNTRY_CODE,
-                },
-            )
-
-        return self.async_show_form(
-            step_id="user_id",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_USER_ID): str,
-                    vol.Optional(CONF_COUNTRY_CODE, default=DEFAULT_COUNTRY_CODE): str,
-                }
-            ),
-            errors=errors,
-        )
 
     async def async_step_reauth(self, entry_data: dict[str, Any]) -> FlowResult:
         """Handle reauthorization request."""
