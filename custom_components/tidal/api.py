@@ -204,6 +204,19 @@ class TidalAPI:
             _LOGGER.error("Connection error: %s", err)
             raise TidalConnectionError(f"Connection error: {err}") from err
 
+    async def get_current_user(self) -> dict[str, Any]:
+        """Get current user information.
+
+        Returns:
+            User data including user ID
+
+        Raises:
+            TidalAuthError: If not authenticated
+            TidalConnectionError: If request fails
+        """
+        response = await self._request("GET", "users/me")
+        return response.get("data", {})
+
     async def get_user_playlists(self) -> list[dict[str, Any]]:
         """Get user's playlists.
 
