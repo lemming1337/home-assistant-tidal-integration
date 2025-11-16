@@ -1,0 +1,166 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Tidal",
+        "description": "Enter your Tidal API credentials",
+        "data": {
+          "client_id": "Client ID",
+          "client_secret": "Client Secret",
+          "user_id": "User ID",
+          "country_code": "Country Code"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Tidal",
+        "description": "Your Tidal credentials need to be updated",
+        "data": {
+          "client_id": "Client ID",
+          "client_secret": "Client Secret"
+        }
+      }
+    },
+    "error": {
+      "authentication_failed": "Authentication failed. Please check your credentials.",
+      "cannot_connect": "Unable to connect to Tidal API. Please try again later.",
+      "invalid_auth": "Invalid authentication credentials.",
+      "unknown_error": "An unknown error occurred."
+    },
+    "abort": {
+      "already_configured": "This Tidal account is already configured.",
+      "reauth_successful": "Reauthentication successful.",
+      "reauth_failed": "Reauthentication failed. Please try again."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tidal Options",
+        "description": "Configure Tidal integration options",
+        "data": {
+          "country_code": "Country Code"
+        }
+      }
+    }
+  },
+  "services": {
+    "play_playlist": {
+      "name": "Play Playlist",
+      "description": "Play a Tidal playlist",
+      "fields": {
+        "playlist_id": {
+          "name": "Playlist ID",
+          "description": "ID of the playlist to play"
+        },
+        "entity_id": {
+          "name": "Media Player",
+          "description": "Media player entity to use (optional)"
+        }
+      }
+    },
+    "play_album": {
+      "name": "Play Album",
+      "description": "Play a Tidal album",
+      "fields": {
+        "album_id": {
+          "name": "Album ID",
+          "description": "ID of the album to play"
+        },
+        "entity_id": {
+          "name": "Media Player",
+          "description": "Media player entity to use (optional)"
+        }
+      }
+    },
+    "play_track": {
+      "name": "Play Track",
+      "description": "Play a Tidal track",
+      "fields": {
+        "track_id": {
+          "name": "Track ID",
+          "description": "ID of the track to play"
+        },
+        "entity_id": {
+          "name": "Media Player",
+          "description": "Media player entity to use (optional)"
+        }
+      }
+    },
+    "play_artist": {
+      "name": "Play Artist",
+      "description": "Play music from a Tidal artist",
+      "fields": {
+        "artist_id": {
+          "name": "Artist ID",
+          "description": "ID of the artist to play"
+        },
+        "entity_id": {
+          "name": "Media Player",
+          "description": "Media player entity to use (optional)"
+        }
+      }
+    },
+    "add_to_playlist": {
+      "name": "Add to Playlist",
+      "description": "Add tracks to a Tidal playlist",
+      "fields": {
+        "playlist_id": {
+          "name": "Playlist ID",
+          "description": "ID of the playlist"
+        },
+        "track_ids": {
+          "name": "Track IDs",
+          "description": "List of track IDs to add"
+        }
+      }
+    },
+    "remove_from_playlist": {
+      "name": "Remove from Playlist",
+      "description": "Remove tracks from a Tidal playlist",
+      "fields": {
+        "playlist_id": {
+          "name": "Playlist ID",
+          "description": "ID of the playlist"
+        },
+        "track_ids": {
+          "name": "Track IDs",
+          "description": "List of track IDs to remove"
+        }
+      }
+    },
+    "create_playlist": {
+      "name": "Create Playlist",
+      "description": "Create a new Tidal playlist",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Name of the playlist"
+        },
+        "description": {
+          "name": "Description",
+          "description": "Description of the playlist (optional)"
+        }
+      }
+    },
+    "like_track": {
+      "name": "Like Track",
+      "description": "Add a track to favorites",
+      "fields": {
+        "track_id": {
+          "name": "Track ID",
+          "description": "ID of the track to like"
+        }
+      }
+    },
+    "unlike_track": {
+      "name": "Unlike Track",
+      "description": "Remove a track from favorites",
+      "fields": {
+        "track_id": {
+          "name": "Track ID",
+          "description": "ID of the track to unlike"
+        }
+      }
+    }
+  }
+}
