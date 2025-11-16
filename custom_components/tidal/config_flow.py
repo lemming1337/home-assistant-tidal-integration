@@ -29,6 +29,7 @@ from .const import (
     ERROR_AUTH_FAILED,
     ERROR_CANNOT_CONNECT,
     ERROR_UNKNOWN,
+    OAUTH_SCOPES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -74,7 +75,7 @@ class TidalFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._redirect_uri = f"{get_url(self.hass)}/auth/external/callback"
 
             # Build authorization URL
-            scopes = "r_usr w_usr"
+            scopes = " ".join(OAUTH_SCOPES)
             auth_url = (
                 f"{TIDAL_AUTH_URL}"
                 f"?response_type=code"
