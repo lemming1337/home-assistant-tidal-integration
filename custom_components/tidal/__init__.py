@@ -5,24 +5,26 @@ import logging
 from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import CONF_ACCESS_TOKEN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers import (
+    aiohttp_client,
+    config_entry_oauth2_flow,
+)
 
 from .api import TidalAPI, TidalAuthError, TidalConnectionError
 from .const import (
-    CONF_CLIENT_ID,
-    CONF_CLIENT_SECRET,
     CONF_COUNTRY_CODE,
     CONF_USER_ID,
     DEFAULT_COUNTRY_CODE,
     DOMAIN,
     PLATFORMS,
 )
+from .coordinator import TidalDataUpdateCoordinator
 
 if TYPE_CHECKING:
-    from .coordinator import TidalDataUpdateCoordinator
+    pass
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,31 +45,49 @@ async def async_setup_entry(hass: HomeAssistant, entry: TidalConfigEntry) -> boo
         ConfigEntryAuthFailed: If authentication fails
         ConfigEntryNotReady: If connection fails
     """
-    _LOGGER.debug("Setting up Tidal integration for user %s", entry.data[CONF_USER_ID])
+    _LOGGER.debug("Setting up Tidal integration for user %s", entry.data.get(CONF_USER_ID))
 
-    session = async_get_clientsession(hass)
+    # Get OAuth2 implementation
+    implementation = (
+        await config_entry_oauth2_flow.async_get_config_entry_implementation(
+            hass, entry
+        )
+    )
+
+    session = aiohttp_client.async_get_clientsession(hass)
+
+    # Get access token from entry data
+    token = entry.data.get("token", {})
+    access_token = token.get("access_token")
+    refresh_token = token.get("refresh_token")
+
+    if not access_token:
+        # Try legacy format
+        access_token = entry.data.get(CONF_ACCESS_TOKEN)
+        refresh_token = entry.data.get("refresh_token")
+
+    if not access_token:
+        _LOGGER.error("No access token found in config entry")
+        raise ConfigEntryAuthFailed("No access token found")
 
     # Create API client
     api = TidalAPI(
         session=session,
-        client_id=entry.data[CONF_CLIENT_ID],
-        client_secret=entry.data[CONF_CLIENT_SECRET],
+        client_id=implementation.client_id,
+        client_secret=implementation.client_secret,
         user_id=entry.data[CONF_USER_ID],
         country_code=entry.data.get(CONF_COUNTRY_CODE, DEFAULT_COUNTRY_CODE),
     )
 
     # Authenticate
     try:
-        await api.authenticate()
+        await api.authenticate(access_token=access_token, refresh_token=refresh_token)
     except TidalAuthError as err:
         _LOGGER.error("Authentication failed: %s", err)
         raise ConfigEntryAuthFailed(f"Authentication failed: {err}") from err
     except TidalConnectionError as err:
         _LOGGER.error("Connection failed: %s", err)
         raise ConfigEntryNotReady(f"Connection failed: {err}") from err
-
-    # Import here to avoid circular dependency
-    from .coordinator import TidalDataUpdateCoordinator
 
     # Create coordinator
     coordinator = TidalDataUpdateCoordinator(hass, api)
@@ -87,7 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TidalConfigEntry) -> boo
     # Register LLM tools
     await async_setup_llm_tools(hass, entry)
 
-    _LOGGER.info("Tidal integration setup complete for user %s", entry.data[CONF_USER_ID])
+    _LOGGER.info("Tidal integration setup complete for user %s", entry.data.get(CONF_USER_ID))
 
     return True
 
@@ -102,13 +122,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: TidalConfigEntry) -> bo
     Returns:
         True if unload was successful
     """
-    _LOGGER.debug("Unloading Tidal integration for user %s", entry.data[CONF_USER_ID])
+    _LOGGER.debug("Unloading Tidal integration for user %s", entry.data.get(CONF_USER_ID))
 
     # Unload platforms
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        _LOGGER.info("Tidal integration unloaded for user %s", entry.data[CONF_USER_ID])
+        _LOGGER.info("Tidal integration unloaded for user %s", entry.data.get(CONF_USER_ID))
 
     return unload_ok
 

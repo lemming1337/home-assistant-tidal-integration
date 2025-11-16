@@ -3,7 +3,7 @@
   "name": "Tidal",
   "codeowners": ["@lemming1337"],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": ["application_credentials"],
   "documentation": "https://github.com/lemming1337/home-assistant-tidal-integration",
   "integration_type": "service",
   "iot_class": "cloud_polling",
