@@ -16,6 +16,7 @@ from homeassistant.const import CONF_ACCESS_TOKEN
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.network import get_url
 
 from .api import TidalAPI, TidalAuthError, TidalConnectionError
 from .const import (
@@ -70,7 +71,7 @@ class TidalFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._state = secrets.token_urlsafe(32)
 
             # Build redirect URI
-            self._redirect_uri = f"{self.hass.config.api.base_url}/auth/external/callback"
+            self._redirect_uri = f"{get_url(self.hass)}/auth/external/callback"
 
             # Build authorization URL
             scopes = "r_usr w_usr"
