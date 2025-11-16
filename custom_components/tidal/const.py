@@ -24,7 +24,6 @@ API_TOKEN_URL: Final = "https://auth.tidal.com/v1/oauth2/token"
 OAUTH_SCOPES: Final = [
     "user.read",
     "playlists.read",
-    "playlists.write",
     "collection.read",
     "playback",
     "search.read",
