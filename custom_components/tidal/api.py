@@ -210,7 +210,12 @@ class TidalAPI:
         Returns:
             List of playlist data
         """
-        response = await self._request("GET", f"userCollections/{self._user_id}/playlists")
+        params = {"include": "playlists"}
+        response = await self._request(
+            "GET",
+            f"userCollections/{self._user_id}/relationships/playlists",
+            params=params
+        )
         return response.get("data", [])
 
     async def get_user_albums(self) -> list[dict[str, Any]]:
@@ -219,7 +224,12 @@ class TidalAPI:
         Returns:
             List of album data
         """
-        response = await self._request("GET", f"userCollections/{self._user_id}/albums")
+        params = {"include": "albums"}
+        response = await self._request(
+            "GET",
+            f"userCollections/{self._user_id}/relationships/albums",
+            params=params
+        )
         return response.get("data", [])
 
     async def get_user_tracks(self) -> list[dict[str, Any]]:
@@ -228,7 +238,12 @@ class TidalAPI:
         Returns:
             List of track data
         """
-        response = await self._request("GET", f"userCollections/{self._user_id}/tracks")
+        params = {"include": "tracks"}
+        response = await self._request(
+            "GET",
+            f"userCollections/{self._user_id}/relationships/tracks",
+            params=params
+        )
         return response.get("data", [])
 
     async def get_user_artists(self) -> list[dict[str, Any]]:
@@ -237,7 +252,12 @@ class TidalAPI:
         Returns:
             List of artist data
         """
-        response = await self._request("GET", f"userCollections/{self._user_id}/artists")
+        params = {"include": "artists"}
+        response = await self._request(
+            "GET",
+            f"userCollections/{self._user_id}/relationships/artists",
+            params=params
+        )
         return response.get("data", [])
 
     async def get_album(self, album_id: str) -> dict[str, Any]:
@@ -327,7 +347,7 @@ class TidalAPI:
 
         response = await self._request(
             "POST",
-            f"userCollections/{self._user_id}/playlists",
+            f"userCollections/{self._user_id}/relationships/playlists",
             json=data,
         )
         return response.get("data", {})
@@ -351,7 +371,7 @@ class TidalAPI:
 
         await self._request(
             "POST",
-            f"playlists/{playlist_id}/tracks",
+            f"playlists/{playlist_id}/relationships/tracks",
             json=data,
         )
 
@@ -365,7 +385,7 @@ class TidalAPI:
         for track_id in track_ids:
             await self._request(
                 "DELETE",
-                f"playlists/{playlist_id}/tracks/{track_id}",
+                f"playlists/{playlist_id}/relationships/tracks/{track_id}",
             )
 
     async def add_favorite_album(self, album_id: str) -> None:
@@ -383,7 +403,7 @@ class TidalAPI:
 
         await self._request(
             "POST",
-            f"userCollections/{self._user_id}/albums",
+            f"userCollections/{self._user_id}/relationships/albums",
             json=data,
         )
 
@@ -395,7 +415,7 @@ class TidalAPI:
         """
         await self._request(
             "DELETE",
-            f"userCollections/{self._user_id}/albums/{album_id}",
+            f"userCollections/{self._user_id}/relationships/albums/{album_id}",
         )
 
     async def add_favorite_track(self, track_id: str) -> None:
@@ -413,7 +433,7 @@ class TidalAPI:
 
         await self._request(
             "POST",
-            f"userCollections/{self._user_id}/tracks",
+            f"userCollections/{self._user_id}/relationships/tracks",
             json=data,
         )
 
@@ -425,7 +445,7 @@ class TidalAPI:
         """
         await self._request(
             "DELETE",
-            f"userCollections/{self._user_id}/tracks/{track_id}",
+            f"userCollections/{self._user_id}/relationships/tracks/{track_id}",
         )
 
     @property
