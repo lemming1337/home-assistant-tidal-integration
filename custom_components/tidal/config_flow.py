@@ -6,7 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -36,7 +36,14 @@ class TidalFlowHandler(
         """Initialize the config flow."""
         super().__init__()
         self._country_code: str | None = None
-        self._reauth_entry: ConfigEntry | None = None
+        self._reauth_entry: config_entries.ConfigEntry | None = None
+
+    @staticmethod
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        """Get the options flow for this handler."""
+        return TidalOptionsFlow(config_entry)
 
     @property
     def logger(self) -> logging.Logger:
@@ -149,8 +156,12 @@ class TidalFlowHandler(
         )
 
 
-class TidalOptionsFlow(config_entry_oauth2_flow.AbstractOAuth2OptionsFlow):
+class TidalOptionsFlow(config_entries.OptionsFlow):
     """Handle Tidal options."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize Tidal options flow."""
+        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
