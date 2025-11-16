@@ -21,7 +21,15 @@ API_AUTH_URL: Final = "https://auth.tidal.com/v1/oauth2"
 API_TOKEN_URL: Final = "https://auth.tidal.com/v1/oauth2/token"
 
 # OAuth2 scopes
-OAUTH_SCOPES: Final = ["r_usr", "w_usr"]
+OAUTH_SCOPES: Final = [
+    "user.read",
+    "playlists.read",
+    "playlists.write",
+    "collection.read",
+    "collection.write",
+    "playback",
+    "search.read",
+]
 
 # Platforms
 PLATFORMS: Final = ["media_player", "sensor"]
