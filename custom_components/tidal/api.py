@@ -115,7 +115,7 @@ class TidalAPI:
             f"userCollections/{self._user_id}/relationships/playlists",
             params=params,
         )
-        return response.get("data", [])
+        return response.get("included", [])
 
     async def get_user_albums(self) -> list[dict[str, Any]]:
         """Get user's favorite albums.
@@ -129,7 +129,7 @@ class TidalAPI:
             f"userCollections/{self._user_id}/relationships/albums",
             params=params,
         )
-        return response.get("data", [])
+        return response.get("included", [])
 
     async def get_user_tracks(self) -> list[dict[str, Any]]:
         """Get user's favorite tracks.
@@ -143,7 +143,7 @@ class TidalAPI:
             f"userCollections/{self._user_id}/relationships/tracks",
             params=params,
         )
-        return response.get("data", [])
+        return response.get("included", [])
 
     async def get_user_artists(self) -> list[dict[str, Any]]:
         """Get user's favorite artists.
@@ -157,7 +157,7 @@ class TidalAPI:
             f"userCollections/{self._user_id}/relationships/artists",
             params=params,
         )
-        return response.get("data", [])
+        return response.get("included", [])
 
     async def get_album(self, album_id: str) -> dict[str, Any]:
         """Get album details.

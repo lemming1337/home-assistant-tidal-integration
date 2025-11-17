@@ -1,4 +1,5 @@
 """Config flow for Tidal integration."""
+
 from __future__ import annotations
 
 import logging
@@ -43,7 +44,7 @@ class TidalFlowHandler(
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
-        return TidalOptionsFlow(config_entry)
+        return TidalOptionsFlow()
 
     @property
     def logger(self) -> logging.Logger:
@@ -78,8 +79,6 @@ class TidalFlowHandler(
         self, data: dict[str, Any]
     ) -> config_entries.ConfigFlowResult:
         """Create an entry for the flow."""
-        # Get OAuth2 implementation
-        implementation = await self.async_get_implementation()
 
         # Create a temporary config entry-like object for OAuth2Session
         # We need to use a simple session with access token for initial user info fetch
@@ -95,7 +94,7 @@ class TidalFlowHandler(
             async with session.get(
                 f"{API_BASE_URL}/users/me",
                 headers=headers,
-                params={"countryCode": self._country_code or DEFAULT_COUNTRY_CODE}
+                params={"countryCode": self._country_code or DEFAULT_COUNTRY_CODE},
             ) as response:
                 response.raise_for_status()
                 response_data = await response.json()
@@ -167,16 +166,12 @@ class TidalFlowHandler(
 class TidalOptionsFlow(config_entries.OptionsFlow):
     """Handle Tidal options."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize Tidal options flow."""
-        self.config_entry = config_entry
-
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            return self.async_create_entry(data=user_input)
 
         return self.async_show_form(
             step_id="init",
