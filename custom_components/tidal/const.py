@@ -33,7 +33,7 @@ OAUTH_SCOPES: Final = [
 PLATFORMS: Final = ["media_player", "sensor"]
 
 # Update intervals (in seconds)
-UPDATE_INTERVAL: Final = 30
+UPDATE_INTERVAL: Final = 60 * 10
 TOKEN_REFRESH_INTERVAL: Final = 3600
 
 # Media player constants
