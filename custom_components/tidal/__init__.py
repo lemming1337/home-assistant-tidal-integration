@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ACCESS_TOKEN, Platform
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-type TidalConfigEntry = ConfigEntry[TidalDataUpdateCoordinator]
+TidalConfigEntry: TypeAlias = ConfigEntry[TidalDataUpdateCoordinator]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: TidalConfigEntry) -> bool:
@@ -54,46 +54,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: TidalConfigEntry) -> boo
         )
     )
 
-    session = aiohttp_client.async_get_clientsession(hass)
+    # Create OAuth2 session
+    oauth_session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
 
-    # Get access token from entry data
-    token = entry.data.get("token", {})
-    access_token = token.get("access_token")
-    refresh_token = token.get("refresh_token")
-
-    if not access_token:
-        # Try legacy format
-        access_token = entry.data.get(CONF_ACCESS_TOKEN)
-        refresh_token = entry.data.get("refresh_token")
-
-    if not access_token:
-        _LOGGER.error("No access token found in config entry")
-        raise ConfigEntryAuthFailed("No access token found")
-
-    # Create API client
-    api = TidalAPI(
-        session=session,
-        client_id=implementation.client_id,
-        client_secret=implementation.client_secret,
-        user_id=entry.data[CONF_USER_ID],
-        country_code=entry.data.get(CONF_COUNTRY_CODE, DEFAULT_COUNTRY_CODE),
-    )
-
-    # Authenticate
+    # Create API client with OAuth2 session
     try:
-        await api.authenticate(access_token=access_token, refresh_token=refresh_token)
-    except TidalAuthError as err:
-        _LOGGER.error("Authentication failed: %s", err)
-        raise ConfigEntryAuthFailed(f"Authentication failed: {err}") from err
-    except TidalConnectionError as err:
-        _LOGGER.error("Connection failed: %s", err)
-        raise ConfigEntryNotReady(f"Connection failed: {err}") from err
+        api = TidalAPI(
+            oauth_session=oauth_session,
+            user_id=entry.data[CONF_USER_ID],
+            country_code=entry.data.get(CONF_COUNTRY_CODE, DEFAULT_COUNTRY_CODE),
+        )
+    except Exception as err:
+        _LOGGER.error("Failed to create API client: %s", err)
+        raise ConfigEntryNotReady(f"Failed to create API client: {err}") from err
 
     # Create coordinator
     coordinator = TidalDataUpdateCoordinator(hass, api)
 
-    # Fetch initial data
-    await coordinator.async_config_entry_first_refresh()
+    # Fetch initial data - this will test authentication
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except Exception as err:
+        _LOGGER.error("Failed to fetch initial data: %s", err)
+        # Check if it's an authentication error
+        if "401" in str(err) or "authentication" in str(err).lower():
+            raise ConfigEntryAuthFailed(f"Authentication failed: {err}") from err
+        raise ConfigEntryNotReady(f"Failed to fetch initial data: {err}") from err
 
     # Store coordinator
     entry.runtime_data = coordinator
@@ -105,7 +91,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: TidalConfigEntry) -> boo
     await async_setup_services(hass, coordinator)
 
     # Register LLM tools
-    await async_setup_llm_tools(hass, entry)
+    llm_unregister = await async_setup_llm_tools(hass, entry)
+    entry.async_on_unload(llm_unregister)
 
     _LOGGER.info("Tidal integration setup complete for user %s", entry.data.get(CONF_USER_ID))
 

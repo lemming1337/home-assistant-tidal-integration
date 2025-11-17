@@ -11,8 +11,8 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import TidalAPI, TidalAuthError, TidalConnectionError
 from .const import (
+    API_BASE_URL,
     CONF_COUNTRY_CODE,
     CONF_USER_ID,
     DEFAULT_COUNTRY_CODE,
@@ -78,31 +78,35 @@ class TidalFlowHandler(
         self, data: dict[str, Any]
     ) -> config_entries.ConfigFlowResult:
         """Create an entry for the flow."""
+        # Get OAuth2 implementation
+        implementation = await self.async_get_implementation()
+
+        # Create a temporary config entry-like object for OAuth2Session
+        # We need to use a simple session with access token for initial user info fetch
         session = async_get_clientsession(self.hass)
 
-        # Get user ID from /users/me endpoint
+        # Get user ID from /users/me endpoint by making a direct API call
         try:
-            api = TidalAPI(
-                session=session,
-                client_id=data["token"]["access_token"],  # Temporary
-                client_secret="",  # Not needed for API calls
-                user_id="",  # Will be set after getting user info
-                country_code=self._country_code or DEFAULT_COUNTRY_CODE,
-            )
-            await api.authenticate(
-                access_token=data["token"]["access_token"],
-                refresh_token=data["token"].get("refresh_token"),
-            )
+            headers = {
+                "Authorization": f"Bearer {data['token']['access_token']}",
+                "Content-Type": "application/vnd.api+json",
+            }
 
-            # Call /users/me to get the user ID
-            user_data = await api.get_current_user()
-            user_id = user_data.get("id")
+            async with session.get(
+                f"{API_BASE_URL}/users/me",
+                headers=headers,
+                params={"countryCode": self._country_code or DEFAULT_COUNTRY_CODE}
+            ) as response:
+                response.raise_for_status()
+                response_data = await response.json()
+                user_data = response_data.get("data", {})
+                user_id = user_data.get("id")
 
             if not user_id:
                 _LOGGER.error("Failed to retrieve user ID from /users/me endpoint")
                 return self.async_abort(reason=ERROR_AUTH_FAILED)
 
-        except (TidalAuthError, TidalConnectionError) as err:
+        except Exception as err:
             _LOGGER.exception("Error getting user info: %s", err)
             return self.async_abort(reason=ERROR_AUTH_FAILED)
 
