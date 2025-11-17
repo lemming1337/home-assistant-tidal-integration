@@ -2,48 +2,17 @@
 
 from __future__ import annotations
 
-import abc
-import asyncio
 import logging
-from datetime import datetime, timedelta
 from typing import Any
 
 import aiohttp
-from aiohttp import ClientError, ClientResponseError, ClientSession
+from aiohttp import ClientError, ClientResponseError
 
-
-from .const import (
-    API_BASE_URL,
-    API_TOKEN_URL,
-    OAUTH_SCOPES,
-)
-
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_entry_oauth2_flow
-from .abstract_auth import AbstractAuth
+
+from .const import API_BASE_URL
 
 _LOGGER = logging.getLogger(__name__)
-
-# TODO the following two API examples are based on our suggested best practices
-# for libraries using OAuth2 with requests or aiohttp. Delete the one you won't use.
-# For more info see the docs at https://developers.home-assistant.io/docs/api_lib_auth/#oauth2.
-
-
-class Auth(AbstractAuth):
-    def __init__(self, websession: ClientSession, host: str, token_manager):
-        """Initialize the auth."""
-        super().__init__(websession, host)
-        self.token_manager = token_manager
-
-    async def async_get_access_token(self) -> str:
-        """Return a valid access token."""
-        if self.token_manager.is_token_valid():
-            return self.token_manager.access_token
-
-        await self.token_manager.fetch_access_token()
-        await self.token_manager.save_access_token()
-
-        return self.token_manager.access_token
 
 
 class TidalAuthError(Exception):
@@ -59,133 +28,20 @@ class TidalAPI:
 
     def __init__(
         self,
-        session: aiohttp.ClientSession,
-        client_id: str,
-        client_secret: str,
+        oauth_session: config_entry_oauth2_flow.OAuth2Session,
         user_id: str,
         country_code: str = "DE",
     ) -> None:
         """Initialize the Tidal API client.
 
         Args:
-            session: aiohttp client session
-            client_id: Tidal API client ID
-            client_secret: Tidal API client secret
+            oauth_session: OAuth2 session from Home Assistant
             user_id: Tidal user ID
             country_code: ISO 3166-1 country code
         """
-        self._session = session
-        self._client_id = client_id
-        self._client_secret = client_secret
+        self._oauth_session = oauth_session
         self._user_id = user_id
         self._country_code = country_code
-        self._access_token: str | None = None
-        self._token_expires: datetime | None = None
-        self._refresh_token: str | None = None
-
-    async def authenticate(
-        self, access_token: str | None = None, refresh_token: str | None = None
-    ) -> None:
-        """Authenticate with Tidal API.
-
-        Args:
-            access_token: Optional existing access token
-            refresh_token: Optional existing refresh token
-
-        Raises:
-            TidalAuthError: If authentication fails
-        """
-        if access_token and refresh_token:
-            self._access_token = access_token
-            self._refresh_token = refresh_token
-            # Assume token expires in 1 hour if not specified
-            self._token_expires = datetime.now() + timedelta(hours=1)
-        else:
-            await self._get_client_credentials()
-
-    async def _get_client_credentials(self) -> None:
-        """Get access token using client credentials flow.
-
-        Raises:
-            TidalAuthError: If authentication fails
-            TidalConnectionError: If connection fails
-        """
-        try:
-            data = {
-                "grant_type": "client_credentials",
-                "client_id": self._client_id,
-                "client_secret": self._client_secret,
-            }
-
-            async with self._session.post(API_TOKEN_URL, data=data) as response:
-                response.raise_for_status()
-                token_data = await response.json()
-
-                self._access_token = token_data["access_token"]
-                expires_in = token_data.get("expires_in", 3600)
-                self._token_expires = datetime.now() + timedelta(seconds=expires_in)
-                self._refresh_token = token_data.get("refresh_token")
-
-                _LOGGER.info("Successfully authenticated with Tidal API")
-
-        except ClientResponseError as err:
-            _LOGGER.error("Authentication failed: %s", err)
-            raise TidalAuthError(f"Authentication failed: {err}") from err
-        except ClientError as err:
-            _LOGGER.error("Connection error during authentication: %s", err)
-            raise TidalConnectionError(f"Connection error: {err}") from err
-
-    async def _ensure_token_valid(self) -> None:
-        """Ensure the access token is valid, refresh if needed.
-
-        Raises:
-            TidalAuthError: If token refresh fails
-        """
-        if not self._access_token or not self._token_expires:
-            await self._get_client_credentials()
-            return
-
-        # Refresh token if it expires in less than 5 minutes
-        if datetime.now() >= self._token_expires - timedelta(minutes=5):
-            if self._refresh_token:
-                await self._refresh_access_token()
-            else:
-                await self._get_client_credentials()
-
-    async def _refresh_access_token(self) -> None:
-        """Refresh the access token using refresh token.
-
-        Raises:
-            TidalAuthError: If token refresh fails
-            TidalConnectionError: If connection fails
-        """
-        try:
-            data = {
-                "grant_type": "refresh_token",
-                "refresh_token": self._refresh_token,
-                "client_id": self._client_id,
-                "client_secret": self._client_secret,
-            }
-
-            async with self._session.post(API_TOKEN_URL, data=data) as response:
-                response.raise_for_status()
-                token_data = await response.json()
-
-                self._access_token = token_data["access_token"]
-                expires_in = token_data.get("expires_in", 3600)
-                self._token_expires = datetime.now() + timedelta(seconds=expires_in)
-                self._refresh_token = token_data.get(
-                    "refresh_token", self._refresh_token
-                )
-
-                _LOGGER.debug("Successfully refreshed access token")
-
-        except ClientResponseError as err:
-            _LOGGER.error("Token refresh failed: %s", err)
-            raise TidalAuthError(f"Token refresh failed: {err}") from err
-        except ClientError as err:
-            _LOGGER.error("Connection error during token refresh: %s", err)
-            raise TidalConnectionError(f"Connection error: {err}") from err
 
     async def _request(
         self,
@@ -207,13 +63,9 @@ class TidalAPI:
             TidalAuthError: If authentication fails
             TidalConnectionError: If connection fails
         """
-        await self._ensure_token_valid()
-
         url = f"{API_BASE_URL}/{endpoint.lstrip('/')}"
-        headers = {
-            "Authorization": f"Bearer {self._access_token}",
-            "Content-Type": "application/vnd.api+json",
-        }
+        headers = kwargs.pop("headers", {})
+        headers["Content-Type"] = "application/vnd.api+json"
 
         # Add country code to params if not already present
         params = kwargs.get("params", {})
@@ -222,11 +74,11 @@ class TidalAPI:
         kwargs["params"] = params
 
         try:
-            async with self._session.request(
+            response = await self._oauth_session.async_request(
                 method, url, headers=headers, **kwargs
-            ) as response:
-                response.raise_for_status()
-                return await response.json()
+            )
+            response.raise_for_status()
+            return await response.json()
 
         except ClientResponseError as err:
             if err.status == 401:
@@ -502,7 +354,7 @@ class TidalAPI:
     @property
     def is_authenticated(self) -> bool:
         """Return if client is authenticated."""
-        return self._access_token is not None
+        return self._oauth_session is not None
 
     @property
     def user_id(self) -> str:
