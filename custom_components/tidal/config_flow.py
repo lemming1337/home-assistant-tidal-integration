@@ -78,11 +78,7 @@ class TidalFlowHandler(
         self, data: dict[str, Any]
     ) -> config_entries.ConfigFlowResult:
         """Create an entry for the flow."""
-        # Get OAuth2 implementation
-        implementation = await self.async_get_implementation()
-
-        # Create a temporary config entry-like object for OAuth2Session
-        # We need to use a simple session with access token for initial user info fetch
+        # Use the OAuth2 token to fetch user information
         session = async_get_clientsession(self.hass)
 
         # Get user ID from /users/me endpoint by making a direct API call
