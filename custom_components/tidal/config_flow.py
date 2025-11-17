@@ -59,7 +59,7 @@ class TidalFlowHandler(
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Handle the initial step - collect Country Code."""
         if user_input is not None:
             self._country_code = user_input.get(CONF_COUNTRY_CODE, DEFAULT_COUNTRY_CODE)
@@ -74,7 +74,9 @@ class TidalFlowHandler(
             ),
         )
 
-    async def async_oauth_create_entry(self, data: dict[str, Any]) -> FlowResult:
+    async def async_oauth_create_entry(
+        self, data: dict[str, Any]
+    ) -> config_entries.ConfigFlowResult:
         """Create an entry for the flow."""
         session = async_get_clientsession(self.hass)
 
@@ -127,7 +129,9 @@ class TidalFlowHandler(
             data=data,
         )
 
-    async def async_step_reauth(self, entry_data: dict[str, Any]) -> FlowResult:
+    async def async_step_reauth(
+        self, entry_data: dict[str, Any]
+    ) -> config_entries.ConfigFlowResult:
         """Handle reauthorization request."""
         self._reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
@@ -136,7 +140,7 @@ class TidalFlowHandler(
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Confirm reauthorization."""
         if user_input is not None:
             # Get country code from existing entry
@@ -165,7 +169,7 @@ class TidalOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)

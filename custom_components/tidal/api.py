@@ -1,13 +1,16 @@
 """Tidal API Client."""
+
 from __future__ import annotations
 
+import abc
 import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Any
 
 import aiohttp
-from aiohttp import ClientError, ClientResponseError
+from aiohttp import ClientError, ClientResponseError, ClientSession
+
 
 from .const import (
     API_BASE_URL,
@@ -15,7 +18,32 @@ from .const import (
     OAUTH_SCOPES,
 )
 
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_entry_oauth2_flow
+from .abstract_auth import AbstractAuth
+
 _LOGGER = logging.getLogger(__name__)
+
+# TODO the following two API examples are based on our suggested best practices
+# for libraries using OAuth2 with requests or aiohttp. Delete the one you won't use.
+# For more info see the docs at https://developers.home-assistant.io/docs/api_lib_auth/#oauth2.
+
+
+class Auth(AbstractAuth):
+    def __init__(self, websession: ClientSession, host: str, token_manager):
+        """Initialize the auth."""
+        super().__init__(websession, host)
+        self.token_manager = token_manager
+
+    async def async_get_access_token(self) -> str:
+        """Return a valid access token."""
+        if self.token_manager.is_token_valid():
+            return self.token_manager.access_token
+
+        await self.token_manager.fetch_access_token()
+        await self.token_manager.save_access_token()
+
+        return self.token_manager.access_token
 
 
 class TidalAuthError(Exception):
@@ -35,7 +63,7 @@ class TidalAPI:
         client_id: str,
         client_secret: str,
         user_id: str,
-        country_code: str = "US",
+        country_code: str = "DE",
     ) -> None:
         """Initialize the Tidal API client.
 
@@ -55,7 +83,9 @@ class TidalAPI:
         self._token_expires: datetime | None = None
         self._refresh_token: str | None = None
 
-    async def authenticate(self, access_token: str | None = None, refresh_token: str | None = None) -> None:
+    async def authenticate(
+        self, access_token: str | None = None, refresh_token: str | None = None
+    ) -> None:
         """Authenticate with Tidal API.
 
         Args:
@@ -144,7 +174,9 @@ class TidalAPI:
                 self._access_token = token_data["access_token"]
                 expires_in = token_data.get("expires_in", 3600)
                 self._token_expires = datetime.now() + timedelta(seconds=expires_in)
-                self._refresh_token = token_data.get("refresh_token", self._refresh_token)
+                self._refresh_token = token_data.get(
+                    "refresh_token", self._refresh_token
+                )
 
                 _LOGGER.debug("Successfully refreshed access token")
 
@@ -190,7 +222,9 @@ class TidalAPI:
         kwargs["params"] = params
 
         try:
-            async with self._session.request(method, url, headers=headers, **kwargs) as response:
+            async with self._session.request(
+                method, url, headers=headers, **kwargs
+            ) as response:
                 response.raise_for_status()
                 return await response.json()
 
@@ -227,7 +261,7 @@ class TidalAPI:
         response = await self._request(
             "GET",
             f"userCollections/{self._user_id}/relationships/playlists",
-            params=params
+            params=params,
         )
         return response.get("data", [])
 
@@ -241,7 +275,7 @@ class TidalAPI:
         response = await self._request(
             "GET",
             f"userCollections/{self._user_id}/relationships/albums",
-            params=params
+            params=params,
         )
         return response.get("data", [])
 
@@ -255,7 +289,7 @@ class TidalAPI:
         response = await self._request(
             "GET",
             f"userCollections/{self._user_id}/relationships/tracks",
-            params=params
+            params=params,
         )
         return response.get("data", [])
 
@@ -269,7 +303,7 @@ class TidalAPI:
         response = await self._request(
             "GET",
             f"userCollections/{self._user_id}/relationships/artists",
-            params=params
+            params=params,
         )
         return response.get("data", [])
 
@@ -321,7 +355,9 @@ class TidalAPI:
         response = await self._request("GET", f"artists/{artist_id}")
         return response.get("data", {})
 
-    async def search(self, query: str, search_type: str | None = None) -> dict[str, Any]:
+    async def search(
+        self, query: str, search_type: str | None = None
+    ) -> dict[str, Any]:
         """Search for content.
 
         Args:
@@ -388,7 +424,9 @@ class TidalAPI:
             json=data,
         )
 
-    async def remove_from_playlist(self, playlist_id: str, track_ids: list[str]) -> None:
+    async def remove_from_playlist(
+        self, playlist_id: str, track_ids: list[str]
+    ) -> None:
         """Remove tracks from a playlist.
 
         Args:

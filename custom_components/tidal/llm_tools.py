@@ -1,4 +1,5 @@
 """LLM Tools for Tidal integration."""
+
 from __future__ import annotations
 
 import logging
@@ -6,6 +7,7 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import llm
+from homeassistant.config_entries import ConfigEntry
 
 from .const import (
     DOMAIN,
@@ -20,7 +22,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_llm_tools(hass: HomeAssistant, entry: Any) -> None:
+async def async_setup_llm_tools(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Set up LLM tools for Tidal.
 
     Args:
@@ -30,7 +32,7 @@ async def async_setup_llm_tools(hass: HomeAssistant, entry: Any) -> None:
     coordinator = entry.runtime_data
 
     # Create LLM API
-    api = llm.API(hass, "tidal", "Tidal Music")
+    api = llm.async_register_api(hass, coordinator.api)
 
     # Register tools
     @api.register_tool
@@ -139,7 +141,6 @@ async def async_setup_llm_tools(hass: HomeAssistant, entry: Any) -> None:
     @api.register_tool(
         llm.ToolInput(
             tool_name=TOOL_SEARCH,
-            tool_description="Search for content on Tidal",
             tool_args=[
                 llm.ToolArgument(
                     name="query",
